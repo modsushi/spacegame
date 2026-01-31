@@ -33,14 +33,22 @@ export class SceneManager {
   }
 
   private setupLighting(): void {
-    const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+    // Lower ambient for more contrast with dynamic star lights
+    const ambientLight = new THREE.AmbientLight(0x202030, 0.3);
     this.scene.add(ambientLight);
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+    // Main directional light (distant star)
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
     directionalLight.position.set(1, 1, 1);
     this.scene.add(directionalLight);
 
-    const hemisphereLight = new THREE.HemisphereLight(0x6688cc, 0x222244, 0.3);
+    // Fill light from opposite direction for depth
+    const fillLight = new THREE.DirectionalLight(0x4466aa, 0.3);
+    fillLight.position.set(-1, -0.5, -1);
+    this.scene.add(fillLight);
+
+    // Hemisphere light for better space atmosphere
+    const hemisphereLight = new THREE.HemisphereLight(0x334466, 0x111122, 0.4);
     this.scene.add(hemisphereLight);
   }
 

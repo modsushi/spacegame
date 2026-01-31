@@ -1,168 +1,202 @@
 import * as THREE from 'three';
 import { EvolutionStageType, EVOLUTION_STAGES } from '../config/GameConfig';
+import { TextureGenerator, TextureType } from './TextureGenerator';
+import { createStarMaterial } from './shaders/StarShader';
+import { createGasGiantMaterial } from './shaders/GasGiantShader';
+import { createBlackHoleCoreMaterial } from './shaders/BlackHoleShader';
+import { createWormholeMaterial } from './shaders/WormholeShader';
 
-// Diverse color palettes for variety
-const PLANET_COLORS = [
-  0x4169e1, // Blue (Earth-like)
-  0x228b22, // Green (forest world)
-  0xcd853f, // Tan (desert)
-  0x8b0000, // Dark red (Mars-like)
-  0x4a4a6a, // Slate (rocky)
-];
+// Atmosphere colors for different planet types
+export const ATMOSPHERE_COLORS: Record<string, THREE.Color> = {
+  earth: new THREE.Color(0x88aaff),
+  desert: new THREE.Color(0xffaa88),
+  ice: new THREE.Color(0xaaddff),
+  rocky: new THREE.Color(0x888899),
+};
 
-const ICY_COLORS = [
-  0xadd8e6, // Light blue
-  0xe0ffff, // Light cyan
-  0xf0f8ff, // Alice blue
-  0xb0e0e6, // Powder blue
-];
+export interface MaterialResult {
+  material: THREE.Material;
+  isShader: boolean;
+  atmosphereColor?: THREE.Color;
+  planetType?: string;
+}
 
-const ROCKY_COLORS = [
-  0x696969, // Dim gray
-  0x808080, // Gray
-  0xa0522d, // Sienna
-  0x8b4513, // Saddle brown
-  0x556b2f, // Dark olive
-];
-
-const GAS_GIANT_COLORS = [
-  0xffd700, // Gold (Saturn-like)
-  0xdaa520, // Goldenrod
-  0xf4a460, // Sandy brown
-  0xd2691e, // Chocolate
-  0xcd5c5c, // Indian red (Jupiter-like)
-];
+// Number of texture variations per type (for caching)
+const TEXTURE_POOL_SIZE = 4;
 
 export class MaterialFactory {
-  static createForStage(stage: EvolutionStageType, variant?: number): THREE.Material {
+  static createForStage(
+    stage: EvolutionStageType,
+    variant?: number,
+    isPlayer: boolean = false
+  ): MaterialResult {
     const stageConfig = EVOLUTION_STAGES.find((s) => s.type === stage);
     const baseColor = stageConfig?.color ?? 0xffffff;
 
-    // Use variant for color diversity
+    // Use variant for color diversity and texture seeding
     const v = variant ?? Math.random();
+    // Use a small pool of seeds so textures can be cached and reused
+    const seedIndex = Math.floor(v * TEXTURE_POOL_SIZE);
+    const seed = isPlayer ? Math.floor(v * 10000) : seedIndex * 1000;
 
     let material: THREE.Material;
+    let isShader = false;
+    let atmosphereColor: THREE.Color | undefined;
+    let planetType: string | undefined;
 
     switch (stage) {
-      case 'meteorite':
+      case 'meteorite': {
+        const texture = TextureGenerator.generateTexture('rocky', seed, isPlayer);
+        const normalMap = TextureGenerator.generateNormalMap('rocky', seed, isPlayer);
         material = new THREE.MeshStandardMaterial({
-          color: ROCKY_COLORS[Math.floor(v * ROCKY_COLORS.length)],
+          map: texture,
+          normalMap: normalMap,
+          normalScale: new THREE.Vector2(0.5, 0.5),
+          color: 0xffffff, // White - let texture provide color
           roughness: 0.95,
-          metalness: 0.1
+          metalness: 0.1,
         });
         break;
+      }
 
-      case 'asteroid':
+      case 'asteroid': {
+        const texture = TextureGenerator.generateTexture('rocky', seed + 1000, isPlayer);
+        const normalMap = TextureGenerator.generateNormalMap('rocky', seed + 1000, isPlayer);
         material = new THREE.MeshStandardMaterial({
-          color: ROCKY_COLORS[Math.floor(v * ROCKY_COLORS.length)],
+          map: texture,
+          normalMap: normalMap,
+          normalScale: new THREE.Vector2(0.6, 0.6),
+          color: 0xffffff, // White - let texture provide color
           roughness: 0.9,
-          metalness: 0.15
+          metalness: 0.15,
         });
         break;
+      }
 
       case 'dwarf_planet': {
-        // Mix of icy and rocky
         const isIcy = v < 0.4;
-        const colors = isIcy ? ICY_COLORS : ROCKY_COLORS;
+        const textureType: TextureType = isIcy ? 'planet_ice' : 'rocky';
+        const texture = TextureGenerator.generateTexture(textureType, seed, isPlayer);
+        const normalMap = TextureGenerator.generateNormalMap(textureType, seed, isPlayer);
+
         material = new THREE.MeshStandardMaterial({
-          color: colors[Math.floor(Math.random() * colors.length)],
+          map: texture,
+          normalMap: normalMap,
+          normalScale: new THREE.Vector2(0.4, 0.4),
+          color: 0xffffff, // White - let texture provide color
           roughness: isIcy ? 0.3 : 0.7,
-          metalness: isIcy ? 0.1 : 0.2
+          metalness: isIcy ? 0.1 : 0.2,
         });
+
+        if (isIcy) {
+          atmosphereColor = ATMOSPHERE_COLORS.ice;
+          planetType = 'ice';
+        }
         break;
       }
 
       case 'planet': {
-        // Diverse planet types
-        const planetType = Math.random();
-        let color: number;
+        const planetRand = Math.random();
         let roughness: number;
+        let textureType: TextureType;
 
-        if (planetType < 0.3) {
+        if (planetRand < 0.3) {
           // Icy world
-          color = ICY_COLORS[Math.floor(Math.random() * ICY_COLORS.length)];
+          textureType = 'planet_ice';
           roughness = 0.2;
-        } else if (planetType < 0.6) {
+          atmosphereColor = ATMOSPHERE_COLORS.ice;
+          planetType = 'ice';
+        } else if (planetRand < 0.5) {
           // Rocky world
-          color = ROCKY_COLORS[Math.floor(Math.random() * ROCKY_COLORS.length)];
+          textureType = 'rocky';
           roughness = 0.7;
+          atmosphereColor = ATMOSPHERE_COLORS.rocky;
+          planetType = 'rocky';
+        } else if (planetRand < 0.75) {
+          // Desert world
+          textureType = 'planet_desert';
+          roughness = 0.6;
+          atmosphereColor = ATMOSPHERE_COLORS.desert;
+          planetType = 'desert';
         } else {
           // Earth-like
-          color = PLANET_COLORS[Math.floor(Math.random() * PLANET_COLORS.length)];
+          textureType = 'planet_earth';
           roughness = 0.5;
+          atmosphereColor = ATMOSPHERE_COLORS.earth;
+          planetType = 'earth';
         }
 
+        const texture = TextureGenerator.generateTexture(textureType, seed, isPlayer);
+        const normalMap = TextureGenerator.generateNormalMap(textureType, seed, isPlayer);
+
         material = new THREE.MeshStandardMaterial({
-          color,
+          map: texture,
+          normalMap: normalMap,
+          normalScale: new THREE.Vector2(0.3, 0.3),
+          color: 0xffffff, // White - let texture provide color
           roughness,
-          metalness: 0.1
+          metalness: 0.1,
         });
         break;
       }
 
-      case 'gas_giant':
-        material = new THREE.MeshStandardMaterial({
-          color: GAS_GIANT_COLORS[Math.floor(v * GAS_GIANT_COLORS.length)],
-          roughness: 0.4,
-          metalness: 0.0,
-          emissive: new THREE.Color(GAS_GIANT_COLORS[Math.floor(v * GAS_GIANT_COLORS.length)]),
-          emissiveIntensity: 0.05
-        });
+      case 'gas_giant': {
+        // Use custom shader for animated bands
+        material = createGasGiantMaterial();
+        isShader = true;
         break;
+      }
 
-      case 'star':
-        material = new THREE.MeshStandardMaterial({
-          color: 0xffffee,
-          emissive: new THREE.Color(0xffdd44),
-          emissiveIntensity: 0.4,
-          roughness: 0.0,
-          metalness: 0.0
-        });
+      case 'star': {
+        // Use custom shader for animated plasma
+        material = createStarMaterial(
+          new THREE.Color(0xffdd44),
+          new THREE.Color(0xffaa00)
+        );
+        isShader = true;
         break;
+      }
 
-      case 'blue_star':
-        material = new THREE.MeshStandardMaterial({
-          color: 0xeeeeff,
-          emissive: new THREE.Color(0x4488ff),
-          emissiveIntensity: 0.5,
-          roughness: 0.0,
-          metalness: 0.0
-        });
+      case 'blue_star': {
+        material = createStarMaterial(
+          new THREE.Color(0x88aaff),
+          new THREE.Color(0x4488ff)
+        );
+        isShader = true;
         break;
+      }
 
-      case 'neutron_star':
-        material = new THREE.MeshStandardMaterial({
-          color: 0xffffff,
-          emissive: new THREE.Color(0xee88ff),
-          emissiveIntensity: 0.6,
-          roughness: 0.0,
-          metalness: 0.0
-        });
+      case 'neutron_star': {
+        material = createStarMaterial(
+          new THREE.Color(0xeeccff),
+          new THREE.Color(0xcc88ff)
+        );
+        isShader = true;
         break;
+      }
 
-      case 'black_hole':
-        material = new THREE.MeshBasicMaterial({
-          color: 0x000000
-        });
+      case 'black_hole': {
+        material = createBlackHoleCoreMaterial();
+        isShader = false; // Core is not animated, but accretion disk is added separately
         break;
+      }
 
-      case 'wormhole':
-        material = new THREE.MeshStandardMaterial({
-          color: 0xddddff,
-          emissive: new THREE.Color(0x8844dd),
-          emissiveIntensity: 0.3,
-          roughness: 0.0,
-          metalness: 0.0,
-          transparent: true,
-          opacity: 0.9
-        });
+      case 'wormhole': {
+        material = createWormholeMaterial();
+        isShader = true;
         break;
+      }
 
       default:
         material = new THREE.MeshStandardMaterial({ color: baseColor });
     }
 
-    return material;
+    return { material, isShader, atmosphereColor, planetType };
+  }
+
+  // Legacy method for backwards compatibility
+  static createMaterialOnly(stage: EvolutionStageType, variant?: number): THREE.Material {
+    return this.createForStage(stage, variant).material;
   }
 
   static createRingMaterial(): THREE.Material {
@@ -171,7 +205,7 @@ export class MaterialFactory {
       side: THREE.DoubleSide,
       transparent: true,
       opacity: 0.35,
-      depthWrite: false
+      depthWrite: false,
     });
   }
 }

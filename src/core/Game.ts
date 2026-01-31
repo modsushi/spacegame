@@ -8,6 +8,7 @@ import { CollisionSystem } from '../systems/CollisionSystem';
 import { GravitySystem } from '../systems/GravitySystem';
 import { SpawnSystem } from '../systems/SpawnSystem';
 import { EvolutionSystem } from '../systems/EvolutionSystem';
+import { DynamicLighting } from '../rendering/DynamicLighting';
 import { Player } from '../entities/Player';
 import { CelestialBody } from '../entities/CelestialBody';
 import { HUD } from '../ui/HUD';
@@ -23,6 +24,7 @@ export class Game {
   private gravitySystem: GravitySystem;
   private spawnSystem: SpawnSystem;
   private evolutionSystem: EvolutionSystem;
+  private dynamicLighting: DynamicLighting;
   private player: Player;
   private hud: HUD;
 
@@ -36,6 +38,7 @@ export class Game {
     this.collisionSystem = new CollisionSystem();
     this.gravitySystem = new GravitySystem(this.sceneManager.scene);
     this.evolutionSystem = new EvolutionSystem();
+    this.dynamicLighting = new DynamicLighting(this.sceneManager.scene);
     this.hud = new HUD();
 
     this.player = new Player();
@@ -86,6 +89,13 @@ export class Game {
     }
 
     this.entityManager.update(deltaTime);
+
+    // Update dynamic lighting from nearby stars
+    this.dynamicLighting.setPlayerPosition(
+      this.player.position.x,
+      this.player.position.y
+    );
+    this.dynamicLighting.update(this.entityManager.getEntities());
 
     this.cameraController.update(
       this.player.position.x,

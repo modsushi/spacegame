@@ -4,11 +4,17 @@ import { GameConfig, EVOLUTION_STAGES, EvolutionStageType } from '../config/Game
 import { MaterialFactory } from '../rendering/MaterialFactory';
 import { GeometryFactory } from '../rendering/GeometryFactory';
 import { GlowHelper } from '../rendering/GlowHelper';
+import { createAtmosphereMesh } from '../rendering/shaders/AtmosphereShader';
+
+// Stages that should have atmosphere
+const ATMOSPHERE_STAGES: EvolutionStageType[] = ['planet', 'gas_giant'];
 
 export class Player extends BaseEntity {
   public evolutionStage: EvolutionStageType = 'meteorite';
   private stageIndex = 0;
   private glowSprite: THREE.Sprite | null = null;
+  private shaderMaterial: THREE.ShaderMaterial | null = null;
+  private atmosphereMesh: THREE.Mesh | null = null;
 
   constructor() {
     super(GameConfig.PLAYER_START_MASS, 0, 0);
@@ -16,9 +22,24 @@ export class Player extends BaseEntity {
 
   createMesh(): THREE.Mesh {
     const geometry = GeometryFactory.createForStage(this.evolutionStage);
-    const material = MaterialFactory.createForStage(this.evolutionStage);
-    const mesh = new THREE.Mesh(geometry, material);
+    const materialResult = MaterialFactory.createForStage(this.evolutionStage, undefined, true);
+    const mesh = new THREE.Mesh(geometry, materialResult.material);
     mesh.position.copy(this.position);
+
+    // Store shader material for animation updates
+    if (materialResult.isShader && materialResult.material instanceof THREE.ShaderMaterial) {
+      this.shaderMaterial = materialResult.material;
+    }
+
+    // Add atmosphere for planet stages
+    if (ATMOSPHERE_STAGES.includes(this.evolutionStage) && materialResult.atmosphereColor) {
+      this.atmosphereMesh = createAtmosphereMesh(
+        this.radius,
+        materialResult.atmosphereColor,
+        0.7
+      );
+      mesh.add(this.atmosphereMesh);
+    }
 
     this.glowSprite = GlowHelper.createGlowSprite(this.evolutionStage, this.radius);
     if (this.glowSprite) {
@@ -65,6 +86,11 @@ export class Player extends BaseEntity {
       this.destroy();
     }
 
+    // Reset references before creating new mesh
+    this.shaderMaterial = null;
+    this.atmosphereMesh = null;
+    this.glowSprite = null;
+
     this.mesh = this.createMesh();
     scene.add(this.mesh);
   }
@@ -77,8 +103,28 @@ export class Player extends BaseEntity {
       this.mesh.rotation.y += deltaTime * 0.3;
     }
 
+    // Update shader uniforms for animated materials
+    if (this.shaderMaterial && this.shaderMaterial.uniforms.time) {
+      this.shaderMaterial.uniforms.time.value += deltaTime;
+    }
+
     if (this.glowSprite) {
       this.glowSprite.scale.setScalar(this.radius * 1.3);
     }
+  }
+
+  destroy(): void {
+    if (this.shaderMaterial) {
+      this.shaderMaterial.dispose();
+      this.shaderMaterial = null;
+    }
+
+    if (this.atmosphereMesh) {
+      this.atmosphereMesh.geometry.dispose();
+      (this.atmosphereMesh.material as THREE.Material).dispose();
+      this.atmosphereMesh = null;
+    }
+
+    super.destroy();
   }
 }
