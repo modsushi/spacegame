@@ -9,6 +9,7 @@ import { GravitySystem } from '../systems/GravitySystem';
 import { SpawnSystem } from '../systems/SpawnSystem';
 import { EvolutionSystem } from '../systems/EvolutionSystem';
 import { Player } from '../entities/Player';
+import { CelestialBody } from '../entities/CelestialBody';
 import { HUD } from '../ui/HUD';
 
 export class Game {
@@ -76,6 +77,13 @@ export class Game {
     }
 
     this.spawnSystem.update();
+
+    // Update danger indicators on celestial bodies
+    for (const entity of this.entityManager.getEntities()) {
+      if (entity instanceof CelestialBody) {
+        entity.setDangerous(entity.mass >= this.player.mass);
+      }
+    }
 
     this.entityManager.update(deltaTime);
 

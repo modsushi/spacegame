@@ -4,6 +4,7 @@ import { EVOLUTION_STAGES, EvolutionStageType } from '../config/GameConfig';
 import { MaterialFactory } from '../rendering/MaterialFactory';
 import { GeometryFactory } from '../rendering/GeometryFactory';
 import { GlowHelper } from '../rendering/GlowHelper';
+import { DangerIndicator } from '../rendering/DangerIndicator';
 
 export class CelestialBody extends BaseEntity {
   public readonly entityType: EvolutionStageType;
@@ -11,6 +12,7 @@ export class CelestialBody extends BaseEntity {
   private glowSprite: THREE.Sprite | null = null;
   private rings: THREE.Mesh | null = null;
   public readonly hasRings: boolean;
+  private dangerSprite: THREE.Sprite | null = null;
 
   private orbitParent: BaseEntity | null = null;
   private orbitRadius = 0;
@@ -74,6 +76,10 @@ export class CelestialBody extends BaseEntity {
       mesh.add(this.glowSprite);
     }
 
+    // Add danger indicator (hidden by default)
+    this.dangerSprite = DangerIndicator.createDangerSprite(this.radius);
+    mesh.add(this.dangerSprite);
+
     return mesh;
   }
 
@@ -104,6 +110,12 @@ export class CelestialBody extends BaseEntity {
 
   onCollision(_other: BaseEntity): void {
     // Non-player entities don't consume others
+  }
+
+  setDangerous(isDangerous: boolean): void {
+    if (this.dangerSprite) {
+      this.dangerSprite.visible = isDangerous;
+    }
   }
 
   isOrbiting(): boolean {
@@ -209,6 +221,10 @@ export class CelestialBody extends BaseEntity {
 
     if (this.glowSprite) {
       this.glowSprite.scale.setScalar(this.radius * 1.3);
+    }
+
+    if (this.dangerSprite) {
+      DangerIndicator.updatePosition(this.dangerSprite, this.radius);
     }
   }
 
