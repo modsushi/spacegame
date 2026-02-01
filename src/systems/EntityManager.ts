@@ -67,4 +67,25 @@ export class EntityManager {
   getScene(): THREE.Scene {
     return this.scene;
   }
+
+  clear(): void {
+    // Remove all entities from scene and destroy them
+    for (const entity of this.entities.values()) {
+      if (entity.mesh) {
+        this.scene.remove(entity.mesh);
+      }
+
+      if (entity instanceof CelestialBody) {
+        const orbitLine = entity.getOrbitLine();
+        if (orbitLine) {
+          this.scene.remove(orbitLine);
+        }
+      }
+
+      entity.destroy();
+    }
+
+    this.entities.clear();
+    this.toRemove.clear();
+  }
 }

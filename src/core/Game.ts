@@ -31,6 +31,8 @@ export class Game {
   private particleEffects: ParticleEffects;
   private player: Player;
   private hud: HUD;
+  private controlsGuide: ControlsGuide;
+  private isGameOver: boolean = false;
 
   constructor() {
     this.gameLoop = new GameLoop();
@@ -45,12 +47,15 @@ export class Game {
     this.dynamicLighting = new DynamicLighting(this.sceneManager.scene);
     this.particleEffects = new ParticleEffects(this.sceneManager.scene);
     this.hud = new HUD();
-    new ControlsGuide(); // Self-managing, fades after few keystrokes
+    this.controlsGuide = new ControlsGuide();
 
     this.player = new Player();
     this.entityManager.add(this.player);
 
     this.spawnSystem = new SpawnSystem(this.entityManager, this.player);
+
+    // Set up replay callback
+    this.hud.setOnReplay(() => this.restart());
   }
 
   start(): void {
@@ -60,7 +65,37 @@ export class Game {
     );
   }
 
+  private restart(): void {
+    this.isGameOver = false;
+
+    // Clear all entities (this also cleans up orbit lines)
+    this.entityManager.clear();
+
+    // Create new player
+    this.player = new Player();
+    this.entityManager.add(this.player);
+
+    // Reset spawn system with new player reference
+    this.spawnSystem = new SpawnSystem(this.entityManager, this.player);
+
+    // Reset HUD
+    this.hud.reset();
+
+    // Reset camera
+    this.cameraController.reset();
+
+    // Show controls guide again
+    this.controlsGuide.show();
+  }
+
   private update(deltaTime: number): void {
+    // Don't update game logic if game is over
+    if (this.isGameOver) {
+      // Still render particles and effects
+      this.particleEffects.update(deltaTime);
+      return;
+    }
+
     const direction = this.inputManager.getDirection();
     this.player.applyInput(direction.x, direction.y, deltaTime);
 
@@ -75,12 +110,26 @@ export class Game {
         if (entityB instanceof CelestialBody || entityB instanceof Player) {
           this.spawnDestructionEffect(entityB);
         }
+
+        // Check if player died
+        if (entityB === this.player) {
+          this.handlePlayerDeath();
+          return;
+        }
+
         this.entityManager.remove(entityB);
       } else if (entityB.mass > entityA.mass) {
         entityB.onCollision(entityA);
         if (entityA instanceof CelestialBody || entityA instanceof Player) {
           this.spawnDestructionEffect(entityA);
         }
+
+        // Check if player died
+        if (entityA === this.player) {
+          this.handlePlayerDeath();
+          return;
+        }
+
         this.entityManager.remove(entityA);
       }
     }
@@ -119,6 +168,18 @@ export class Game {
     );
 
     this.hud.update(this.player.mass, this.player.evolutionStage);
+  }
+
+  private handlePlayerDeath(): void {
+    this.isGameOver = true;
+
+    // Remove player from entity manager
+    this.entityManager.remove(this.player);
+
+    // Show game over screen after a brief delay for the destruction effect
+    setTimeout(() => {
+      this.hud.showGameOver();
+    }, 800);
   }
 
   private render(): void {

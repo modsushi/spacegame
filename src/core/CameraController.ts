@@ -32,4 +32,9 @@ export class CameraController {
 
     this.camera.position.z += (clampedZ - this.camera.position.z) * GameConfig.CAMERA_LERP_SPEED;
   }
+
+  reset(): void {
+    this.camera.position.set(0, 0, GameConfig.CAMERA_DISTANCE);
+    this.targetPosition.set(0, 0, 0);
+  }
 }

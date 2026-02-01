@@ -97,10 +97,18 @@ export class ControlsGuide {
     if (this.isHidden) return;
     this.isHidden = true;
     this.element.classList.add('hidden');
+  }
 
-    // Remove from DOM after fade
-    setTimeout(() => {
-      this.element.remove();
-    }, 1000);
+  show(): void {
+    this.isHidden = false;
+    this.keystrokeCount = 0;
+    this.element.classList.remove('hidden');
+
+    // Reset key styles
+    this.keyElements.forEach((el) => {
+      el.style.background = 'rgba(255, 255, 255, 0.1)';
+      el.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+      el.style.color = 'rgba(255, 255, 255, 0.7)';
+    });
   }
 }
