@@ -124,7 +124,7 @@ export const AccretionDiskShader = {
       }
 
       // Spiral rotation
-      float spiralAngle = angle + time * 1.5 + (1.0 - dist) * 8.0;
+      float spiralAngle = angle + time * 1.0 + (1.0 - dist) * 7.0;
       float spiral = sin(spiralAngle * 4.0) * 0.5 + 0.5;
       spiral = pow(spiral, 1.5);
 
@@ -166,17 +166,17 @@ export function createAccretionDiskMaterial(): THREE.ShaderMaterial {
 export function createBlackHoleMesh(radius: number): THREE.Group {
   const group = new THREE.Group();
 
-  // Core black sphere
-  const coreGeometry = new THREE.SphereGeometry(radius * 0.4, 32, 32);
+  // Core black sphere - larger relative to disk
+  const coreGeometry = new THREE.SphereGeometry(radius * 0.6, 32, 32);
   const coreMaterial = createBlackHoleCoreMaterial();
   const core = new THREE.Mesh(coreGeometry, coreMaterial);
   group.add(core);
 
-  // Accretion disk
-  const diskGeometry = new THREE.RingGeometry(radius * 0.5, radius * 1.5, 64, 1);
+  // Accretion disk - smaller and tighter
+  const diskGeometry = new THREE.RingGeometry(radius * 0.7, radius * 1.1, 48, 1);
   const diskMaterial = createAccretionDiskMaterial();
   const disk = new THREE.Mesh(diskGeometry, diskMaterial);
-  disk.rotation.x = Math.PI / 2 * 0.8; // Slight tilt
+  disk.rotation.x = Math.PI / 2 * 0.85; // Slight tilt
   group.add(disk);
 
   return group;

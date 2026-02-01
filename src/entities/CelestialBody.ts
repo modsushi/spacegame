@@ -38,8 +38,8 @@ export class CelestialBody extends BaseEntity {
       this.entityType = this.determineType(mass);
     }
 
-    // 40% of gas giants have rings (Saturn-like)
-    this.hasRings = this.entityType === 'gas_giant' && Math.random() < 0.4;
+    // Disable rings - too visually noisy at large scales
+    this.hasRings = false;
 
     this.rotationSpeed = new THREE.Vector3(
       (Math.random() - 0.5) * 2,
@@ -208,7 +208,7 @@ export class CelestialBody extends BaseEntity {
     const material = new THREE.LineBasicMaterial({
       color: 0x4488ff,
       transparent: true,
-      opacity: 0.3
+      opacity: 0.25
     });
 
     return new THREE.Line(geometry, material);

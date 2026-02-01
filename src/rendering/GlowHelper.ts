@@ -28,9 +28,10 @@ export class GlowHelper {
       size / 2, size / 2, 0,
       size / 2, size / 2, size / 2
     );
-    gradient.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
-    gradient.addColorStop(0.4, 'rgba(255, 255, 255, 0.1)');
-    gradient.addColorStop(0.7, 'rgba(255, 255, 255, 0.03)');
+    // Balanced glow intensity
+    gradient.addColorStop(0, 'rgba(255, 255, 255, 0.22)');
+    gradient.addColorStop(0.35, 'rgba(255, 255, 255, 0.08)');
+    gradient.addColorStop(0.65, 'rgba(255, 255, 255, 0.02)');
     gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
 
     ctx.fillStyle = gradient;
@@ -51,36 +52,41 @@ export class GlowHelper {
     const stageConfig = EVOLUTION_STAGES.find((s) => s.type === stage);
     const color = stageConfig?.color ?? 0xffffff;
 
-    let glowScale = 1.3;
+    let glowScale = 1.2;
 
     switch (stage) {
       case 'gas_giant':
-        glowScale = 1.2;
+        glowScale = 1.15;
         break;
       case 'star':
-        glowScale = 1.4;
+        glowScale = 1.25;
         break;
       case 'blue_star':
-        glowScale = 1.5;
+        glowScale = 1.3;
         break;
       case 'neutron_star':
-        glowScale = 1.6;
+        glowScale = 1.35;
         break;
       case 'wormhole':
-        glowScale = 1.5;
+        glowScale = 1.25;
         break;
     }
+
+    // Cap glow size for very large entities to prevent screen clutter
+    const maxGlowRadius = 100;
+    const glowRadius = Math.min(baseRadius * glowScale, maxGlowRadius);
 
     const spriteMaterial = new THREE.SpriteMaterial({
       map: this.glowTexture,
       color: new THREE.Color(color),
       transparent: true,
       blending: THREE.AdditiveBlending,
-      depthWrite: false
+      depthWrite: false,
+      opacity: 0.85
     });
 
     const sprite = new THREE.Sprite(spriteMaterial);
-    sprite.scale.setScalar(baseRadius * glowScale);
+    sprite.scale.setScalar(glowRadius);
 
     return sprite;
   }

@@ -23,12 +23,12 @@ export class PostProcessing {
     const renderPass = new RenderPass(scene, camera);
     this.composer.addPass(renderPass);
 
-    // 2. Bloom pass - increased strength and lower threshold for better star/glow effects
+    // 2. Bloom pass - balanced glow effect
     const bloomPass = new UnrealBloomPass(
       new THREE.Vector2(window.innerWidth, window.innerHeight),
-      0.7,   // strength (increased from 0.5)
-      0.3,   // radius
-      0.5    // threshold (lowered from 0.6)
+      0.55,  // strength
+      0.25,  // radius
+      0.6    // threshold
     );
     this.composer.addPass(bloomPass);
 

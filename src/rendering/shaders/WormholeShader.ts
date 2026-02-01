@@ -41,13 +41,13 @@ export const WormholeShader = {
       float phi = acos(clamp(vPosition.y / length(vPosition), -1.0, 1.0));
 
       // Spiral pattern
-      float spiral = sin(theta * 5.0 + phi * 3.0 - time * 3.0);
+      float spiral = sin(theta * 5.0 + phi * 3.0 - time * 2.0);
       spiral = spiral * 0.5 + 0.5;
       spiral = pow(spiral, 2.0);
 
       // Pulsing energy rings
-      float rings = sin(phi * 20.0 - time * 4.0);
-      rings = smoothstep(0.6, 1.0, rings);
+      float rings = sin(phi * 15.0 - time * 2.5);
+      rings = smoothstep(0.6, 1.0, rings) * 0.6;
 
       // Vortex effect - brighten towards poles
       float vortex = 1.0 - abs(vPosition.y / length(vPosition));
@@ -118,14 +118,14 @@ export const WormholeRingShader = {
       // Ring shape
       float ring = 1.0 - smoothstep(0.0, 0.3, abs(dist - 0.7));
 
-      // Rotating energy pulses
-      float pulses = sin(angle * 8.0 - time * 5.0);
-      pulses = smoothstep(0.3, 1.0, pulses);
+      // Rotating energy pulses - slower
+      float pulses = sin(angle * 6.0 - time * 1.5);
+      pulses = smoothstep(0.5, 1.0, pulses);
 
-      float brightness = ring * (0.5 + pulses * 0.5);
+      float brightness = ring * (0.6 + pulses * 0.4);
 
-      // Pulsing
-      brightness *= sin(time * 3.0) * 0.2 + 1.0;
+      // Pulsing - slower
+      brightness *= sin(time * 1.0) * 0.1 + 0.9;
 
       gl_FragColor = vec4(color * brightness * 1.5, brightness * ring);
     }
@@ -156,18 +156,12 @@ export function createWormholeMesh(radius: number): THREE.Group {
   const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
   group.add(sphere);
 
-  // Energy ring
-  const ringGeometry = new THREE.RingGeometry(radius * 1.2, radius * 1.6, 64, 1);
+  // Single subtle energy ring - smaller and tighter
+  const ringGeometry = new THREE.RingGeometry(radius * 1.05, radius * 1.15, 48, 1);
   const ringMaterial = createWormholeRingMaterial();
   const ring = new THREE.Mesh(ringGeometry, ringMaterial);
   ring.rotation.x = Math.PI / 2;
   group.add(ring);
-
-  // Second ring at different angle
-  const ring2 = new THREE.Mesh(ringGeometry.clone(), ringMaterial.clone());
-  ring2.rotation.x = Math.PI / 2;
-  ring2.rotation.y = Math.PI / 3;
-  group.add(ring2);
 
   return group;
 }

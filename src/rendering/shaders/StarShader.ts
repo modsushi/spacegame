@@ -86,16 +86,16 @@ export const StarShader = {
       );
 
       // Animated plasma cells
-      vec2 uv1 = sphereUV * noiseScale + time * 0.1;
-      vec2 uv2 = sphereUV * noiseScale * 1.5 - time * 0.15;
+      vec2 uv1 = sphereUV * noiseScale + time * 0.08;
+      vec2 uv2 = sphereUV * noiseScale * 1.4 - time * 0.1;
 
       float n1 = fbm(uv1);
       float n2 = fbm(uv2);
-      float plasma = (n1 + n2) * 0.5 + 0.5;
+      float plasma = (n1 + n2) * 0.4 + 0.6;
 
       // Bright spots (convection cells)
-      float spots = snoise(sphereUV * 8.0 + time * 0.2);
-      spots = smoothstep(0.4, 0.8, spots) * 0.3;
+      float spots = snoise(sphereUV * 7.0 + time * 0.12);
+      spots = smoothstep(0.4, 0.85, spots) * 0.25;
 
       // Pulsing brightness
       float pulse = sin(time * pulseSpeed) * pulseIntensity + 1.0;
@@ -105,7 +105,7 @@ export const StarShader = {
       intensity *= pulse;
 
       vec3 color = mix(baseColor, emissiveColor, intensity);
-      color *= intensity * 1.2;
+      color *= intensity * 1.1;
 
       gl_FragColor = vec4(color, 1.0);
     }

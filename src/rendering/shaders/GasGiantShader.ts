@@ -85,11 +85,11 @@ export const GasGiantShader = {
 
       // Animate bands horizontally at different speeds per latitude
       float latitude = sphereUV.y;
-      float latOffset = sin(latitude * 3.14159 * 4.0) * 0.3; // Different speeds at different latitudes
-      float animatedX = sphereUV.x + time * bandSpeed * (1.0 + latOffset);
+      float latOffset = sin(latitude * 3.14159 * 4.0) * 0.25;
+      float animatedX = sphereUV.x + time * bandSpeed * 0.6 * (1.0 + latOffset);
 
       // Turbulence at band boundaries
-      float turbulence = fbm(vec2(animatedX * 8.0, latitude * 4.0) + time * 0.1);
+      float turbulence = fbm(vec2(animatedX * 7.0, latitude * 3.5) + time * 0.05);
       turbulence *= turbulenceStrength;
 
       // Band position with turbulence
