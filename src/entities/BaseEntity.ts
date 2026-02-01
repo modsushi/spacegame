@@ -23,6 +23,10 @@ export abstract class BaseEntity {
     return GameConfig.BASE_RADIUS * Math.pow(mass, GameConfig.MASS_TO_RADIUS_POWER);
   }
 
+  updateRadiusFromMass(): void {
+    this.radius = this.calculateRadius(this.mass);
+  }
+
   abstract createMesh(): THREE.Mesh;
 
   abstract onCollision(other: BaseEntity): void;
