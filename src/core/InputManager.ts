@@ -1,3 +1,5 @@
+import { MobileControls } from '../ui/MobileControls';
+
 export interface InputState {
   up: boolean;
   down: boolean;
@@ -13,9 +15,13 @@ export class InputManager {
     right: false
   };
 
+  private mobileControls: MobileControls;
+
   constructor() {
     window.addEventListener('keydown', this.onKeyDown);
     window.addEventListener('keyup', this.onKeyUp);
+
+    this.mobileControls = new MobileControls();
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
@@ -52,6 +58,13 @@ export class InputManager {
   }
 
   getDirection(): { x: number; y: number } {
+    // Check mobile controls first (analog input)
+    const mobileDir = this.mobileControls.getDirection();
+    if (mobileDir.x !== 0 || mobileDir.y !== 0) {
+      return mobileDir;
+    }
+
+    // Fall back to keyboard (digital input)
     let x = 0;
     let y = 0;
 
@@ -69,8 +82,13 @@ export class InputManager {
     return { x, y };
   }
 
+  isMobile(): boolean {
+    return this.mobileControls.isMobileDevice();
+  }
+
   destroy(): void {
     window.removeEventListener('keydown', this.onKeyDown);
     window.removeEventListener('keyup', this.onKeyUp);
+    this.mobileControls.destroy();
   }
 }

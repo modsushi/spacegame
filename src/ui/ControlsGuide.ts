@@ -4,9 +4,18 @@ export class ControlsGuide {
   private keystrokeCount = 0;
   private readonly fadeAfterKeystrokes = 5;
   private isHidden = false;
+  private isMobile: boolean;
 
   constructor() {
     this.element = document.getElementById('controls-guide')!;
+
+    // Detect mobile and hide keyboard controls
+    this.isMobile = this.detectMobile();
+    if (this.isMobile) {
+      this.element.style.display = 'none';
+      this.isHidden = true;
+      return;
+    }
 
     // Cache key elements
     const keys = this.element.querySelectorAll('.key[data-key]');
@@ -100,8 +109,12 @@ export class ControlsGuide {
   }
 
   show(): void {
+    // Don't show on mobile
+    if (this.isMobile) return;
+
     this.isHidden = false;
     this.keystrokeCount = 0;
+    this.element.style.display = '';
     this.element.classList.remove('hidden');
 
     // Reset key styles
@@ -110,5 +123,13 @@ export class ControlsGuide {
       el.style.borderColor = 'rgba(255, 255, 255, 0.3)';
       el.style.color = 'rgba(255, 255, 255, 0.7)';
     });
+  }
+
+  private detectMobile(): boolean {
+    return (
+      'ontouchstart' in window ||
+      navigator.maxTouchPoints > 0 ||
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    );
   }
 }
