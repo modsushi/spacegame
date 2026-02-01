@@ -26,13 +26,15 @@ export class AudioManager {
       }
       document.removeEventListener('click', startMusic);
       document.removeEventListener('keydown', startMusic);
+      document.removeEventListener('touchstart', startMusic);
     };
 
     // Try to play immediately
     this.bgMusic.play().catch(() => {
-      // If blocked, wait for user interaction
+      // If blocked, wait for user interaction (including touch for mobile)
       document.addEventListener('click', startMusic, { once: true });
       document.addEventListener('keydown', startMusic, { once: true });
+      document.addEventListener('touchstart', startMusic, { once: true });
     });
   }
 

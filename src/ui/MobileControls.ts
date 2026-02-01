@@ -12,9 +12,8 @@ export class MobileControls {
   private state: JoystickState = { active: false, x: 0, y: 0 };
   private isMobile: boolean;
   private touchId: number | null = null;
-  private baseX: number = 0;
-  private baseY: number = 0;
-  private maxDistance: number = 50;
+  private maxDistance: number = 40;
+  private baseSize: number = 120;
   private hasInteracted: boolean = false;
 
   constructor() {
@@ -37,36 +36,96 @@ export class MobileControls {
     }
   }
 
+  private detectMobile(): boolean {
+    return (
+      'ontouchstart' in window ||
+      navigator.maxTouchPoints > 0 ||
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    );
+  }
+
+  private createContainer(): HTMLElement {
+    const container = document.createElement('div');
+    container.id = 'mobile-controls';
+    container.style.cssText = `
+      position: fixed;
+      bottom: 30px;
+      left: 30px;
+      width: ${this.baseSize}px;
+      height: ${this.baseSize}px;
+      z-index: 150;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    `;
+    return container;
+  }
+
+  private createJoystickBase(): HTMLElement {
+    const base = document.createElement('div');
+    base.id = 'joystick-base';
+    base.style.cssText = `
+      position: absolute;
+      width: ${this.baseSize}px;
+      height: ${this.baseSize}px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 60%, rgba(255,255,255,0.02) 100%);
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.3), inset 0 0 20px rgba(255, 255, 255, 0.05);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    `;
+    return base;
+  }
+
+  private createJoystickThumb(): HTMLElement {
+    const thumb = document.createElement('div');
+    thumb.id = 'joystick-thumb';
+    thumb.style.cssText = `
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 100%);
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 15px rgba(255, 255, 255, 0.2), inset 0 0 10px rgba(255, 255, 255, 0.1);
+      transition: box-shadow 0.15s ease, border-color 0.15s ease;
+    `;
+    return thumb;
+  }
+
   private showHint(): void {
     this.hint = document.createElement('div');
     this.hint.id = 'mobile-hint';
-    this.hint.innerHTML = `
-      <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
-        <div style="width: 60px; height: 60px; border: 2px solid rgba(255,255,255,0.4); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-          <div style="width: 24px; height: 24px; background: rgba(255,255,255,0.6); border-radius: 50%;"></div>
-        </div>
-        <div style="font-size: 14px; letter-spacing: 2px;">TOUCH TO MOVE</div>
-      </div>
-    `;
+    this.hint.textContent = 'DRAG TO MOVE';
     this.hint.style.cssText = `
       position: fixed;
-      bottom: 15%;
-      left: 25%;
-      transform: translateX(-50%);
-      color: rgba(255, 255, 255, 0.6);
+      bottom: ${30 + this.baseSize + 15}px;
+      left: 30px;
+      width: ${this.baseSize}px;
+      color: rgba(255, 255, 255, 0.5);
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-size: 11px;
+      letter-spacing: 2px;
       text-align: center;
       z-index: 140;
       pointer-events: none;
-      animation: pulse 2s ease-in-out infinite;
+      animation: fadeInOut 2s ease-in-out infinite;
     `;
 
-    // Add pulse animation
+    // Add animation
     const style = document.createElement('style');
+    style.id = 'mobile-hint-style';
     style.textContent = `
-      @keyframes pulse {
-        0%, 100% { opacity: 0.6; transform: translateX(-50%) scale(1); }
-        50% { opacity: 1; transform: translateX(-50%) scale(1.05); }
+      @keyframes fadeInOut {
+        0%, 100% { opacity: 0.4; }
+        50% { opacity: 0.8; }
       }
     `;
     document.head.appendChild(style);
@@ -82,114 +141,58 @@ export class MobileControls {
       setTimeout(() => {
         this.hint?.remove();
         this.hint = null;
+        document.getElementById('mobile-hint-style')?.remove();
       }, 500);
     }
   }
 
-  private detectMobile(): boolean {
-    return (
-      'ontouchstart' in window ||
-      navigator.maxTouchPoints > 0 ||
-      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-    );
-  }
-
-  private createContainer(): HTMLElement {
-    const container = document.createElement('div');
-    container.id = 'mobile-controls';
-    container.style.cssText = `
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 50%;
-      height: 40%;
-      z-index: 150;
-      touch-action: none;
-      user-select: none;
-      -webkit-user-select: none;
-      -webkit-touch-callout: none;
-    `;
-    return container;
-  }
-
-  private createJoystickBase(): HTMLElement {
-    const base = document.createElement('div');
-    base.id = 'joystick-base';
-    base.style.cssText = `
-      position: absolute;
-      width: 120px;
-      height: 120px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 70%, rgba(255,255,255,0.02) 100%);
-      border: 2px solid rgba(255, 255, 255, 0.2);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(4px);
-      -webkit-backdrop-filter: blur(4px);
-    `;
-    return base;
-  }
-
-  private createJoystickThumb(): HTMLElement {
-    const thumb = document.createElement('div');
-    thumb.id = 'joystick-thumb';
-    thumb.style.cssText = `
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.2) 100%);
-      border: 2px solid rgba(255, 255, 255, 0.5);
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
-      box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
-      transition: box-shadow 0.1s ease;
-    `;
-    return thumb;
-  }
-
   private setupTouchListeners(): void {
-    this.container.addEventListener('touchstart', this.onTouchStart.bind(this), { passive: false });
-    this.container.addEventListener('touchmove', this.onTouchMove.bind(this), { passive: false });
-    this.container.addEventListener('touchend', this.onTouchEnd.bind(this), { passive: false });
-    this.container.addEventListener('touchcancel', this.onTouchEnd.bind(this), { passive: false });
+    // Listen on the whole document for more forgiving touch area
+    document.addEventListener('touchstart', this.onTouchStart.bind(this), { passive: false });
+    document.addEventListener('touchmove', this.onTouchMove.bind(this), { passive: false });
+    document.addEventListener('touchend', this.onTouchEnd.bind(this), { passive: false });
+    document.addEventListener('touchcancel', this.onTouchEnd.bind(this), { passive: false });
+  }
+
+  private getJoystickCenter(): { x: number; y: number } {
+    const rect = this.joystickBase.getBoundingClientRect();
+    return {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2
+    };
   }
 
   private onTouchStart(e: TouchEvent): void {
-    e.preventDefault();
-
     // Hide hint on first interaction
     this.hideHint();
 
     if (this.touchId !== null) return;
 
     const touch = e.changedTouches[0];
+    const center = this.getJoystickCenter();
+
+    // Check if touch is within expanded joystick area (more forgiving)
+    const dx = touch.clientX - center.x;
+    const dy = touch.clientY - center.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    // Allow touch within 100px of joystick center
+    if (distance > 100) return;
+
+    e.preventDefault();
     this.touchId = touch.identifier;
 
-    // Position joystick at touch location
-    this.baseX = touch.clientX;
-    this.baseY = touch.clientY;
-
-    this.joystickBase.style.display = 'flex';
-    this.joystickBase.style.left = `${this.baseX - 60}px`;
-    this.joystickBase.style.top = `${this.baseY - 60}px`;
-
-    // Reset thumb to center
-    this.joystickThumb.style.left = '50%';
-    this.joystickThumb.style.top = '50%';
-    this.joystickThumb.style.boxShadow = '0 0 20px rgba(255, 255, 255, 0.5)';
+    // Activate visual state
+    this.joystickBase.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+    this.joystickBase.style.boxShadow = '0 0 30px rgba(0, 0, 0, 0.3), inset 0 0 20px rgba(255, 255, 255, 0.1)';
+    this.joystickThumb.style.borderColor = 'rgba(255, 255, 255, 0.6)';
+    this.joystickThumb.style.boxShadow = '0 0 20px rgba(255, 255, 255, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.2)';
 
     this.state.active = true;
-    this.state.x = 0;
-    this.state.y = 0;
+    this.updateThumbPosition(touch.clientX, touch.clientY);
   }
 
   private onTouchMove(e: TouchEvent): void {
-    e.preventDefault();
-
     if (this.touchId === null) return;
 
     // Find our tracked touch
@@ -202,10 +205,17 @@ export class MobileControls {
     }
 
     if (!touch) return;
+    e.preventDefault();
 
-    // Calculate offset from base center
-    const dx = touch.clientX - this.baseX;
-    const dy = touch.clientY - this.baseY;
+    this.updateThumbPosition(touch.clientX, touch.clientY);
+  }
+
+  private updateThumbPosition(touchX: number, touchY: number): void {
+    const center = this.getJoystickCenter();
+
+    // Calculate offset from center
+    const dx = touchX - center.x;
+    const dy = touchY - center.y;
 
     // Calculate distance and clamp to max
     const distance = Math.sqrt(dx * dx + dy * dy);
@@ -229,29 +239,43 @@ export class MobileControls {
     this.joystickThumb.style.top = `calc(50% + ${thumbY}px)`;
 
     // Update state (normalize to -1 to 1 range)
-    // Note: y is inverted because screen Y increases downward
-    this.state.x = clampedDistance > 5 ? normalizedX * (clampedDistance / this.maxDistance) : 0;
-    this.state.y = clampedDistance > 5 ? -normalizedY * (clampedDistance / this.maxDistance) : 0;
+    // Use a small deadzone (5px) to prevent drift
+    const deadzone = 5;
+    if (clampedDistance > deadzone) {
+      const magnitude = (clampedDistance - deadzone) / (this.maxDistance - deadzone);
+      this.state.x = normalizedX * magnitude;
+      this.state.y = -normalizedY * magnitude; // Invert Y for game coordinates
+    } else {
+      this.state.x = 0;
+      this.state.y = 0;
+    }
   }
 
   private onTouchEnd(e: TouchEvent): void {
-    e.preventDefault();
-
     // Check if our tracked touch ended
     for (let i = 0; i < e.changedTouches.length; i++) {
       if (e.changedTouches[i].identifier === this.touchId) {
+        e.preventDefault();
         this.touchId = null;
         this.state.active = false;
         this.state.x = 0;
         this.state.y = 0;
 
-        // Hide joystick
-        this.joystickBase.style.display = 'none';
+        // Reset visual state
+        this.joystickBase.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+        this.joystickBase.style.boxShadow = '0 0 30px rgba(0, 0, 0, 0.3), inset 0 0 20px rgba(255, 255, 255, 0.05)';
+        this.joystickThumb.style.borderColor = 'rgba(255, 255, 255, 0.4)';
+        this.joystickThumb.style.boxShadow = '0 0 15px rgba(255, 255, 255, 0.2), inset 0 0 10px rgba(255, 255, 255, 0.1)';
 
-        // Reset thumb
+        // Animate thumb back to center
+        this.joystickThumb.style.transition = 'left 0.15s ease-out, top 0.15s ease-out';
         this.joystickThumb.style.left = '50%';
         this.joystickThumb.style.top = '50%';
-        this.joystickThumb.style.boxShadow = '0 0 15px rgba(255, 255, 255, 0.3)';
+
+        // Remove transition after animation
+        setTimeout(() => {
+          this.joystickThumb.style.transition = '';
+        }, 150);
         break;
       }
     }
@@ -275,7 +299,6 @@ export class MobileControls {
 
   hide(): void {
     this.container.style.display = 'none';
-    this.joystickBase.style.display = 'none';
     this.state.active = false;
     this.state.x = 0;
     this.state.y = 0;
@@ -285,6 +308,7 @@ export class MobileControls {
   destroy(): void {
     this.container.remove();
     this.hint?.remove();
+    document.getElementById('mobile-hint-style')?.remove();
   }
 
   reset(): void {
@@ -292,5 +316,10 @@ export class MobileControls {
     if (this.isMobile && !this.hint) {
       this.showHint();
     }
+    // Reset thumb to center
+    this.joystickThumb.style.left = '50%';
+    this.joystickThumb.style.top = '50%';
+    this.state.x = 0;
+    this.state.y = 0;
   }
 }
