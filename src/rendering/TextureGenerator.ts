@@ -230,15 +230,37 @@ export class TextureGenerator {
   ): void {
     const imageData = ctx.createImageData(size, size);
 
+    // Different color palettes based on noise seed
+    const colorType = Math.abs(noise.noise2D(0.5, 0.5));
+    let baseColor: { r: number; g: number; b: number };
+
+    if (colorType < 0.2) {
+      // Gray rock
+      baseColor = { r: 180, g: 175, b: 170 };
+    } else if (colorType < 0.4) {
+      // Brown/sienna rock
+      baseColor = { r: 200, g: 150, b: 120 };
+    } else if (colorType < 0.6) {
+      // Reddish/mars rock
+      baseColor = { r: 210, g: 140, b: 110 };
+    } else if (colorType < 0.8) {
+      // Olive/greenish rock
+      baseColor = { r: 160, g: 180, b: 140 };
+    } else {
+      // Blue-gray rock
+      baseColor = { r: 160, g: 170, b: 190 };
+    }
+
     // Pre-compute crater positions (outside pixel loop!)
     const craterSeed = Math.floor(noise.noise2D(0.1, 0.1) * 1000);
     const craterNoise = new SimplexNoise(craterSeed);
     const craters: Array<{ cx: number; cy: number; cr: number }> = [];
-    for (let i = 0; i < 8; i++) {
+    const numCraters = 4 + Math.floor(Math.abs(noise.noise2D(0.2, 0.2)) * 8);
+    for (let i = 0; i < numCraters; i++) {
       craters.push({
         cx: craterNoise.noise2D(i * 7.3, 0) * 0.5 + 0.5,
         cy: craterNoise.noise2D(0, i * 5.7) * 0.5 + 0.5,
-        cr: 0.05 + craterNoise.noise2D(i, i) * 0.1,
+        cr: 0.03 + craterNoise.noise2D(i, i) * 0.12,
       });
     }
 
@@ -264,27 +286,24 @@ export class TextureGenerator {
           if (dist < crater.cr) {
             const rim = Math.abs(dist - crater.cr * 0.8) < 0.02;
             if (rim) {
-              craterDarkness = Math.max(craterDarkness, -0.2);
+              craterDarkness = Math.max(craterDarkness, -0.15);
             } else if (dist < crater.cr * 0.8) {
-              craterDarkness = Math.max(craterDarkness, 0.3 * (1 - dist / (crater.cr * 0.8)));
+              craterDarkness = Math.max(craterDarkness, 0.25 * (1 - dist / (crater.cr * 0.8)));
             }
           }
         }
 
         // Combine layers
         let value = large * 0.5 + medium * 0.3 + small * 0.2;
-        value = value * 0.6 + 0.2; // Adjust range
-        value -= craterDarkness;
-        value = Math.max(0, Math.min(1, value));
+        value = value * 0.35 + 0.65; // Range 0.65-1.0
+        value -= craterDarkness * 0.25;
+        value = Math.max(0.5, Math.min(1, value));
 
-        // Gray/brown rocky color - brighter base for visibility
-        const baseR = 200;
-        const baseG = 190;
-        const baseB = 180;
-
-        imageData.data[idx] = Math.floor(baseR * value);
-        imageData.data[idx + 1] = Math.floor(baseG * value);
-        imageData.data[idx + 2] = Math.floor(baseB * value);
+        // Apply color with variation
+        const colorVar = noise.noise2D(nx * 15, ny * 15) * 20;
+        imageData.data[idx] = Math.max(0, Math.min(255, baseColor.r * value + colorVar));
+        imageData.data[idx + 1] = Math.max(0, Math.min(255, baseColor.g * value + colorVar * 0.8));
+        imageData.data[idx + 2] = Math.max(0, Math.min(255, baseColor.b * value + colorVar * 0.6));
         imageData.data[idx + 3] = 255;
       }
     }
@@ -298,6 +317,21 @@ export class TextureGenerator {
     noise: SimplexNoise
   ): void {
     const imageData = ctx.createImageData(size, size);
+
+    // Different planet types based on seed
+    const planetType = Math.abs(noise.noise2D(0.7, 0.7));
+
+    // Ocean color varies
+    const oceanColor = planetType < 0.5
+      ? { r: 40, g: 100, b: 180 }  // Blue ocean
+      : { r: 30, g: 120, b: 140 }; // Teal ocean
+
+    // Land color varies
+    const landColor = planetType < 0.33
+      ? { r: 80, g: 150, b: 70 }   // Green/forest
+      : planetType < 0.66
+      ? { r: 160, g: 140, b: 90 }  // Savanna/yellow
+      : { r: 100, g: 160, b: 130 };// Teal/alien
 
     for (let y = 0; y < size; y++) {
       for (let x = 0; x < size; x++) {
@@ -318,38 +352,38 @@ export class TextureGenerator {
 
         if (iceCap) {
           // Ice caps
-          r = 240;
-          g = 250;
+          r = 235 + noise.noise2D(nx * 20, ny * 20) * 20;
+          g = 245 + noise.noise2D(nx * 20, ny * 20) * 10;
           b = 255;
         } else if (land > 0.1) {
           // Land
           const height = (land - 0.1) / 0.9;
           if (height > 0.7) {
             // Mountains
-            r = 140 + height * 50;
-            g = 130 + height * 50;
-            b = 120 + height * 50;
+            r = 170 + height * 50;
+            g = 165 + height * 50;
+            b = 155 + height * 50;
           } else if (lat > 0.6) {
             // Tundra
-            r = 150;
-            g = 170;
-            b = 140;
+            r = 170 + landColor.r * 0.1;
+            g = 190 + landColor.g * 0.1;
+            b = 165 + landColor.b * 0.1;
           } else {
-            // Forest/grass
-            r = 60 + height * 40;
-            g = 120 + height * 30;
-            b = 50 + height * 20;
+            // Main land color
+            r = landColor.r + height * 50;
+            g = landColor.g + height * 40;
+            b = landColor.b + height * 30;
           }
         } else {
           // Ocean
           const depth = (0.1 - land) / 0.6;
-          r = 30 - depth * 20;
-          g = 80 - depth * 30;
-          b = 160 - depth * 40;
+          r = oceanColor.r + (1 - depth) * 30;
+          g = oceanColor.g + (1 - depth) * 40;
+          b = oceanColor.b + (1 - depth) * 30;
         }
 
         // Add some variation
-        const variation = noise.noise2D(nx * 30, ny * 30) * 10;
+        const variation = noise.noise2D(nx * 30, ny * 30) * 12;
 
         imageData.data[idx] = Math.max(0, Math.min(255, r + variation));
         imageData.data[idx + 1] = Math.max(0, Math.min(255, g + variation));
@@ -375,19 +409,15 @@ export class TextureGenerator {
         const ny = y / size;
 
         const base = noise.fbm(nx * 4, ny * 4, 2) * 0.5 + 0.5;
-        const detail = noise.noise2D(nx * 15, ny * 15) * 0.2;
-        const value = base + detail;
+        const detail = noise.noise2D(nx * 15, ny * 15) * 0.1;
+        const value = base * 0.3 + 0.7 + detail; // Range 0.7-1.0
 
-        // Desert/Mars-like colors
-        const baseR = 180;
-        const baseG = 120;
-        const baseB = 80;
+        // Desert/Mars-like colors - brighter
+        const variation = noise.noise2D(nx * 20, ny * 20) * 15;
 
-        const variation = noise.noise2D(nx * 20, ny * 20) * 20;
-
-        imageData.data[idx] = Math.max(0, Math.min(255, baseR * value + variation));
-        imageData.data[idx + 1] = Math.max(0, Math.min(255, baseG * value + variation * 0.5));
-        imageData.data[idx + 2] = Math.max(0, Math.min(255, baseB * value));
+        imageData.data[idx] = Math.max(0, Math.min(255, 180 + value * 60 + variation));
+        imageData.data[idx + 1] = Math.max(0, Math.min(255, 140 + value * 50 + variation * 0.5));
+        imageData.data[idx + 2] = Math.max(0, Math.min(255, 100 + value * 40));
         imageData.data[idx + 3] = 255;
       }
     }
@@ -410,14 +440,14 @@ export class TextureGenerator {
 
         const base = noise.fbm(nx * 5, ny * 5, 2) * 0.5 + 0.5;
         const cracks = Math.abs(noise.noise2D(nx * 20, ny * 20));
-        const detail = noise.noise2D(nx * 12, ny * 12) * 0.15;
+        const detail = noise.noise2D(nx * 12, ny * 12) * 0.1;
 
-        const value = base * 0.7 + cracks * 0.2 + detail + 0.3;
+        const value = base * 0.3 + cracks * 0.1 + detail + 0.6; // Brighter base
 
-        // Ice blue-white colors
-        imageData.data[idx] = Math.min(255, 180 + value * 75);
-        imageData.data[idx + 1] = Math.min(255, 200 + value * 55);
-        imageData.data[idx + 2] = Math.min(255, 220 + value * 35);
+        // Ice blue-white colors - very bright
+        imageData.data[idx] = Math.min(255, 200 + value * 55);
+        imageData.data[idx + 1] = Math.min(255, 220 + value * 35);
+        imageData.data[idx + 2] = Math.min(255, 240 + value * 15);
         imageData.data[idx + 3] = 255;
       }
     }
@@ -432,13 +462,13 @@ export class TextureGenerator {
   ): void {
     const imageData = ctx.createImageData(size, size);
 
-    // Color bands for gas giant
+    // Color bands for gas giant - brighter
     const bandColors = [
-      { r: 220, g: 180, b: 120 }, // Tan
-      { r: 200, g: 140, b: 100 }, // Orange-brown
-      { r: 180, g: 160, b: 140 }, // Light brown
-      { r: 240, g: 200, b: 160 }, // Cream
-      { r: 160, g: 120, b: 100 }, // Dark brown
+      { r: 240, g: 210, b: 160 }, // Tan
+      { r: 230, g: 180, b: 140 }, // Orange-brown
+      { r: 220, g: 200, b: 180 }, // Light brown
+      { r: 250, g: 230, b: 200 }, // Cream
+      { r: 200, g: 170, b: 150 }, // Dark brown
     ];
 
     for (let y = 0; y < size; y++) {
@@ -502,19 +532,19 @@ export class TextureGenerator {
 
         // Plasma cell pattern
         const cells = noise.fbm(nx * 6, ny * 6, 2);
-        const detail = noise.noise2D(nx * 15, ny * 15) * 0.3;
+        const detail = noise.noise2D(nx * 15, ny * 15) * 0.2;
 
         // Bright spots (solar flares)
         const spots = noise.noise2D(nx * 4, ny * 4);
-        const brightSpot = spots > 0.6 ? (spots - 0.6) * 2.5 : 0;
+        const brightSpot = spots > 0.6 ? (spots - 0.6) * 2.0 : 0;
 
-        const value = (cells * 0.5 + 0.5) + detail + brightSpot;
-        const intensity = Math.min(1, Math.max(0.5, value));
+        const value = (cells * 0.3 + 0.7) + detail + brightSpot; // Brighter base
+        const intensity = Math.min(1, Math.max(0.7, value));
 
-        // Yellow-white star color
-        imageData.data[idx] = Math.min(255, 255 * intensity);
-        imageData.data[idx + 1] = Math.min(255, 220 * intensity);
-        imageData.data[idx + 2] = Math.min(255, 150 * intensity);
+        // Yellow-white star color - very bright
+        imageData.data[idx] = 255;
+        imageData.data[idx + 1] = Math.min(255, 230 + intensity * 25);
+        imageData.data[idx + 2] = Math.min(255, 180 + intensity * 50);
         imageData.data[idx + 3] = 255;
       }
     }

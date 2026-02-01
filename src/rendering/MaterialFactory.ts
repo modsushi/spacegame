@@ -22,7 +22,7 @@ export interface MaterialResult {
 }
 
 // Number of texture variations per type (for caching)
-const TEXTURE_POOL_SIZE = 4;
+const TEXTURE_POOL_SIZE = 16;
 
 export class MaterialFactory {
   static createForStage(
@@ -141,18 +141,73 @@ export class MaterialFactory {
       }
 
       case 'gas_giant': {
-        // Use custom shader for animated bands
-        material = createGasGiantMaterial();
+        // Use custom shader for animated bands with varied colors
+        const gasGiantType = Math.floor(v * 4);
+        let bandColors: THREE.Color[];
+
+        if (gasGiantType === 0) {
+          // Jupiter-like (orange/brown)
+          bandColors = [
+            new THREE.Color(0xdcb478),
+            new THREE.Color(0xc88c64),
+            new THREE.Color(0xf0c8a0),
+            new THREE.Color(0xb4a08c),
+            new THREE.Color(0xa07864),
+          ];
+        } else if (gasGiantType === 1) {
+          // Saturn-like (yellow/gold)
+          bandColors = [
+            new THREE.Color(0xf0d890),
+            new THREE.Color(0xe8c878),
+            new THREE.Color(0xd4b060),
+            new THREE.Color(0xc8a050),
+            new THREE.Color(0xf8e0a0),
+          ];
+        } else if (gasGiantType === 2) {
+          // Ice giant (blue/cyan)
+          bandColors = [
+            new THREE.Color(0x70a8c8),
+            new THREE.Color(0x5090b0),
+            new THREE.Color(0x88c0d8),
+            new THREE.Color(0x4080a0),
+            new THREE.Color(0x98d0e8),
+          ];
+        } else {
+          // Purple/violet gas giant
+          bandColors = [
+            new THREE.Color(0xb090c0),
+            new THREE.Color(0x9878a8),
+            new THREE.Color(0xc8a8d8),
+            new THREE.Color(0x806090),
+            new THREE.Color(0xd0b8e0),
+          ];
+        }
+
+        material = createGasGiantMaterial(bandColors);
         isShader = true;
         break;
       }
 
       case 'star': {
-        // Use custom shader for animated plasma
-        material = createStarMaterial(
-          new THREE.Color(0xffdd44),
-          new THREE.Color(0xffaa00)
-        );
+        // Use custom shader for animated plasma with varied colors
+        const starVariant = Math.floor(v * 3);
+        let baseCol: THREE.Color, emitCol: THREE.Color;
+
+        if (starVariant === 0) {
+          // Yellow star (sun-like)
+          baseCol = new THREE.Color(0xffee66);
+          emitCol = new THREE.Color(0xffbb00);
+        } else if (starVariant === 1) {
+          // Orange star
+          baseCol = new THREE.Color(0xffcc44);
+          emitCol = new THREE.Color(0xff8800);
+        } else {
+          // White-yellow star
+          baseCol = new THREE.Color(0xffffaa);
+          emitCol = new THREE.Color(0xffdd66);
+        }
+
+        material = createStarMaterial(baseCol, emitCol);
         isShader = true;
         break;
       }
